@@ -1,0 +1,79 @@
+---
+title: "Activity monitoring project"
+author: "Rooholaminr"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,error=F,warning=F}
+#loading libraries needed
+library(ggplot2,warn.conflicts = F) ; library(dplyr,warn.conflicts = F)
+```
+### Q1) Code for reading in the dataset and/or processing the data
+
+first of all we're going go set up the environment somehow that next user be able to just run our code and get the results. no need for extra effort of creating 
+
+```{r , echo = T}
+if(! file.exists('activity.csv')) {
+  download.file(url = 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip',
+                destfile = 'data.zip')
+  unzip(zipfile = 'data.zip')
+  unlink('data.zip', recursive = T)
+}
+
+```
+
+now we have or data downloaded and unzipped. We're one step behind reading the CSV file.
+
+```{r}
+activity <- read.csv('./activity.csv')
+head(activity)
+```
+
+
+as we know about the dataset it includes number of steps in 5 minutes intervals for 60 days.
+some rows include NAs.
+
+
+### Q2) Histogram of the total number of steps taken each day
+
+in this step we need to use `dplyr` package.
+
+```{r,warning=F, error=F}
+act_sum <- activity %>%  group_by(date) %>%  summarise(sum(steps))
+names(act_sum)[2] <- 'steps'
+avgstep <- mean(act_sum$steps, na.rm = T)
+g <-
+  ggplot(data = act_sum, aes(x = date, y = steps)) +
+  geom_bar(stat = 'identity') + geom_hline(yintercept = avgstep, color = 'magenta')
+g
+```
+
+## Q3) Mean and median number of steps taken each day
+
+```{r}
+  avgstep # mean 
+  medsteps <- median(act_sum$steps,na.rm = T)
+  medsteps #median
+```
+
+since median and mean are this close ;I have a rough guess that steps' distribution can be bell curve like.
+let's see.
+
+```{r,warning=F}
+
+ggplot(act_sum,aes(steps)) + geom_histogram(binwidth = 600)
+
+```
+
+we can say that since this histogram is curve liked so number of steps is distributed a normal way.
+the person who this data belongs to him has a norm of walking on a daily basis.
+
+**so far I've done part 3 and 4 in this section since they were closely related.**
+
