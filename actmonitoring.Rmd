@@ -77,3 +77,141 @@ the person who this data belongs to him has a norm of walking on a daily basis.
 
 **so far I've done part 3 and 4 in this section since they were closely related.**
 
+
+## daily activity patterns
+
+
+
+```{r,error=T,warning=F}
+
+# I make a duplicate of activity data
+actd <- activity 
+actd <- actd %>%  group_by(interval) %>%  summarise(mean(steps,na.rm = T))
+names(actd)[2] <- "steps"
+stepmaxindex <- which.max(actd$steps)
+maxstep <- actd$steps[stepmaxindex]
+maxinteval <- actd$interval[stepmaxindex]
+g <- ggplot(actd,aes(x = interval,y = steps)) + geom_line()
+g <- g + geom_hline(yintercept =maxstep, col = 'magenta',lwd = 0.6,alpha = 0.5)
+g <- g + geom_vline(xintercept =maxinteval, col = 'darkgreen',lwd = 0.6,alpha = 0.5)
+g
+rm(g)
+```
+
+the interval with maximum average of steps is interval 835 which is 8:45 in the morning.Its average is ```maxstep``` .
+
+
+
+## Dealing with NAs
+
+first we want to know how many rows are filled with NA. Next step would be finding a stategy to fill them in.
+
+```{r}
+NAnum = 0
+NArows = c()
+st = activity$steps
+len = length(st)
+for (i in 1:len){
+  if(is.na(st[i])){
+    NAnum = NAnum + 1
+    NArows = c(NArows,i)
+  }
+}
+
+```
+number of NAs in our dataset is ```NAnum```.
+our dataset consists of ```round(NAnum/len*100,2)``` percent NAs in it.
+
+*NA filling in strategy*
+
+first thing comes to my mind is using our previous table; average steps on the interval basis , and put the correspondent number in place of NA.
+this section's coding would be highly boring and I suggest you to skip
+```{r}
+for(i in NArows){
+  replacer = as.numeric(actd[actd$interval == activity$interval[i],2])
+  activity$steps[i] = replacer
+}
+
+```
+
+
+### NA filled difference check
+
+hereby we want to check how filling in NA cells makes difference in our daily plot and of course *median* and *mean*.
+
+let's jump in to code plot, since the code is copied from from first plot , I check the `echo = F`
+
+```{r,echo=F,warning=F}
+act_sum1 <- activity %>%  group_by(date) %>%  summarise(sum(steps))
+names(act_sum1)[2] <- 'steps'
+avgstep1 <- mean(act_sum1$steps)
+g <-
+  ggplot(data = act_sum1, aes(x = date, y = steps)) +
+  geom_bar(stat = 'identity') + geom_hline(yintercept = avgstep1, color = 'magenta')
+g
+rm(g)
+```
+
+new plot is denser than before but nothing special happened in this new steps/date plot.
+
+now let's see how the new daily steps histogram differs.
+
+```{r,echo=F,warning=F}
+ggplot(act_sum,aes(steps)) + geom_histogram(binwidth = 600)
+```
+
+in this new plot as we could guess ; steps daily sum is more consistent around mean since we added 13 percent averages replacing with NAs.
+
+#### new median and mean
+
+
+```{r, echo = F}
+  medsteps1 <- median(act_sum1$steps)
+  medavg <- data.frame(median = c(medsteps,medsteps1),mean = c(avgstep,avgstep1))
+  medavg
+```
+
+this two rows are almost identical.so we can say that our adding number method was practical since it didn't change the schema of data at all.
+
+
+
+## weekend and working days pattern
+
+in first step we split data to two parts using date factor in dataset.
+
+```{r,echo = T,warning=F}
+dact <- activity
+dact$date <- as.Date(dact$date,format = "%Y-%m-%d")
+
+iwe <- function(date){
+    if(weekdays(date) == "Sunday" | weekdays(date) == "Saturday")
+        return(T)
+    else return(F)
+}
+
+isWeekend <- sapply(dact$date , iwe)
+dact <- cbind(dact,isWeekend)
+dact <- dact %>%  group_by(interval , isWeekend) %>%  summarise(steps = mean(steps))
+head(dact)
+```
+
+by now we can calculate and see the difference between weekends average of steps in 5 min intevals and working days.
+
+
+```{r,} 
+avgWd <- mean(dact[dact$isWeekend == TRUE,3]$steps)
+avgWe <- mean(dact[dact$isWeekend == FALSE,3]$steps)
+avgtable <- data.frame(WorkingDays = avgWd, Weekends = avgWe)
+avgtable
+
+```
+let's see how this difference changes the shape of our plots :
+
+```{r}
+isWeekend.labs = c("Working Day","Weekend")
+names(isWeekend.labs) = c("Working day","Weekend")
+g <- ggplot(data = dact,aes(x = interval,y = steps)) + geom_line() + facet_grid(.~ isWeekend,labeller = label_both)
+g
+```
+
+ So far all questions are answered.
